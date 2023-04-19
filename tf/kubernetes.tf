@@ -30,7 +30,7 @@ resource "kubernetes_deployment" "dilithiumwebdemo" {
       }
       spec {
         container {
-          image = "towynlin/dilithiumwebdemo:0.1"
+          image = "towynlin/dilithiumwebdemo:0.2"
           name  = "dilithiumwebdemo"
           env {
             name  = "DATABASE_URL"
@@ -39,6 +39,19 @@ resource "kubernetes_deployment" "dilithiumwebdemo" {
 
           port {
             container_port = 1323
+          }
+
+          liveness_probe {
+            http_get {
+              path = "/health"
+              port = 1323
+            }
+          }
+          readiness_probe {
+            http_get {
+              path = "/health"
+              port = 1323
+            }
           }
 
           resources {
