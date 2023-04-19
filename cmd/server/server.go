@@ -20,6 +20,9 @@ import (
 func customJWTAuth(conn *pgx.Conn) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
+			if c.Path() == "/health" {
+				return next(c)
+			}
 			extractor := request.BearerExtractor{}
 			tokenString, err := extractor.ExtractToken(c.Request())
 			if err != nil {
@@ -70,11 +73,14 @@ func main() {
 	e := echo.New()
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
+
 	e.Use(customJWTAuth(conn))
 
 	e.GET("/jobs", getJobsHandler(conn))
 	e.POST("/jobs", postJobHandler(conn))
 	e.DELETE("/jobs/:id", deleteJobHandler(conn))
+
+	e.GET("/health", getHealthHandler(conn))
 
 	e.Logger.Fatal(e.Start(":1323"))
 }
@@ -143,5 +149,21 @@ func deleteJobHandler(conn *pgx.Conn) echo.HandlerFunc {
 			return c.JSON(http.StatusNotFound, ErrorResponse{Error: "Unknown job"})
 		}
 		return c.JSON(http.StatusNoContent, nil)
+	}
+}
+
+type HealthResponse struct {
+	Health string `json:"health"`
+}
+
+func getHealthHandler(conn *pgx.Conn) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		row := conn.QueryRow(context.Background(), "select count(*) from users")
+		var count int
+		if err := row.Scan(&count); err != nil {
+			log.Error(err)
+			return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Database error"})
+		}
+		return c.JSON(http.StatusOK, HealthResponse{Health: "👍"})
 	}
 }
