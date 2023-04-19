@@ -63,6 +63,7 @@ func customJWTAuth(conn *pgx.Conn) echo.MiddlewareFunc {
 }
 
 func main() {
+	fmt.Println("Starting...")
 	conn, err := pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
