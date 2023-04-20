@@ -7,7 +7,7 @@ provider "kubernetes" {
   cluster_ca_certificate = base64decode(google_container_cluster.primary.master_auth.0.cluster_ca_certificate)
 }
 
-resource "kubernetes_deployment" "dilithiumwebdemo" {
+resource "kubernetes_deployment_v1" "dilithiumwebdemo" {
   metadata {
     name = "dilithiumwebdemo"
     labels = {
@@ -16,7 +16,7 @@ resource "kubernetes_deployment" "dilithiumwebdemo" {
   }
 
   spec {
-    replicas = 2
+    replicas = 4
     selector {
       match_labels = {
         App = "dilithiumwebdemo"
@@ -30,7 +30,7 @@ resource "kubernetes_deployment" "dilithiumwebdemo" {
       }
       spec {
         container {
-          image = "towynlin/dilithiumwebdemo:0.2"
+          image = "towynlin/dilithiumwebdemo:0.3"
           name  = "dilithiumwebdemo"
           env {
             name  = "DATABASE_URL"
@@ -41,18 +41,19 @@ resource "kubernetes_deployment" "dilithiumwebdemo" {
             container_port = 1323
           }
 
-          liveness_probe {
-            http_get {
-              path = "/health"
-              port = 1323
-            }
-          }
-          readiness_probe {
-            http_get {
-              path = "/health"
-              port = 1323
-            }
-          }
+          #   liveness_probe {
+          #     http_get {
+          #       path = "/health"
+          #       port = 1323
+          #     }
+          #   }
+          #   readiness_probe {
+          #     http_get {
+          #       path = "/health"
+          #       port = 1323
+          #     }
+          #     failure_threshold = 40
+          #   }
 
           resources {
             limits = {
@@ -70,38 +71,51 @@ resource "kubernetes_deployment" "dilithiumwebdemo" {
   }
 }
 
-resource "kubernetes_service" "dilithiumwebdemo" {
+resource "kubernetes_service_v1" "dilithiumwebdemo" {
   metadata {
-    name        = "dilithiumwebdemo"
-    annotations = { "cloud.google.com/neg" = "{\"ingress\": true}" }
+    name = "dilithiumwebdemo"
+    # annotations = {
+    #   "cloud.google.com/neg" = jsonencode({ ingress = true })
+
+    # }
   }
   spec {
     selector = {
-      App = kubernetes_deployment.dilithiumwebdemo.spec.0.template.0.metadata[0].labels.App
+      App = kubernetes_deployment_v1.dilithiumwebdemo.spec.0.template.0.metadata[0].labels.App
     }
     port {
-      port        = 8080
+      port        = 80
       target_port = 1323
     }
 
     type = "ClusterIP"
   }
+  # lifecycle {
+  #   ignore_changes = [
+  #     metadata[0].annotations,
+  #   ]
+  # }
 }
 
 resource "kubernetes_ingress_v1" "dilithiumwebdemo" {
+  wait_for_load_balancer = true
   metadata {
-    name = "dilithiumwebdemo"
+    name = "dilithium-lb"
+    annotations = {
+      "kubernetes.io/ingress.class" = "nginx"
+    }
   }
   spec {
     default_backend {
       service {
-        name = kubernetes_service.dilithiumwebdemo.metadata[0].name
+        name = kubernetes_service_v1.dilithiumwebdemo.metadata[0].name
         port {
-          number = kubernetes_service.dilithiumwebdemo.spec[0].port[0].port
+          number = kubernetes_service_v1.dilithiumwebdemo.spec[0].port[0].port
         }
       }
     }
     tls {
+      secret_name = "pqcr-tls-secret3"
     }
   }
 }

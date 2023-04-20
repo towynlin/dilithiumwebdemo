@@ -1,0 +1,20 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: dilithium-lb
+spec:
+  tls:
+  - hosts:
+      - postquantumcryptography.rocks
+    secretName: pqcr-tls-secret3
+  rules:
+  - host: postquantumcryptography.rocks
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: dilithiumwebdemo
+            port:
+              number: 80
