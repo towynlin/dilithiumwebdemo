@@ -116,6 +116,27 @@ resource "kubernetes_ingress_v1" "dilithiumwebdemo" {
     }
     tls {
       secret_name = "pqcr-tls-secret3"
+      hosts = [
+        "postquantumcryptography.rocks"
+      ]
+    }
+    rule {
+      host = "postquantumcryptography.rocks"
+
+      http {
+        path {
+          path      = "/"
+          path_type = "Prefix"
+          backend {
+            service {
+              name = "dilithiumwebdemo"
+              port {
+                number = 80
+              }
+            }
+          }
+        }
+      }
     }
   }
 }
